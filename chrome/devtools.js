@@ -1,0 +1,1 @@
+chrome.devtools.panels.create("BurpLite","","panel.html",e=>{e.onShown.addListener(e=>{})});

@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BurpLite</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Left Sidebar: Request List -->
+    <aside id="requestsSidebar" class="sidebar requests-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <h2>Captured Requests</h2>
+          <div class="sidebar-title-actions">
+            <button type="button" id="downloadSelectedCurlBtn" class="sidebar-action-btn hidden" title="Download selected requests as cURL script">↓ Selected (<span id="selectedCount">0</span>)</button>
+            <button type="button" id="downloadCurlBtn" class="sidebar-action-btn" title="Download all filtered requests as cURL script">↓ All</button>
+            <button type="button" id="toggleRequestsSidebarBtn" class="sidebar-toggle-btn" title="Minimize Captured Requests">«</button>
+          </div>
+        </div>
+        <div class="select-all-row">
+          <label class="select-all-label">
+            <input type="checkbox" id="selectAllRequestsCheckbox" aria-label="Select all visible requests">
+            <span id="selectAllLabelText">Select all</span>
+          </label>
+          <button type="button" id="sortOrderBtn" class="sort-order-btn" title="Toggle sort order (newest/oldest first)" aria-label="Toggle sort order">
+            <span id="sortOrderLabel">Newest ↓</span>
+          </button>
+        </div>
+        <div class="capture-controls">
+          <div class="capture-controls-row">
+            <button type="button" id="pauseCaptureBtn" class="capture-control-btn" title="Pause capturing new requests" aria-pressed="false">
+              <span id="pauseCaptureLabel">⏸ Pause</span>
+            </button>
+            <button type="button" id="clearCapturesBtn" class="capture-control-btn capture-control-btn-danger" title="Delete all captured requests">
+              🗑 Clear
+            </button>
+          </div>
+          <div class="capture-controls-row">
+            <label for="captureMaxRequestsInput" class="capture-limit-label">Max:</label>
+            <input type="number" id="captureMaxRequestsInput" class="capture-limit-input" min="100" max="2000" step="100" aria-label="Maximum captured requests">
+            <span class="capture-limit-hint" id="captureCountHint">0 / 500</span>
+          </div>
+          <div class="capture-controls-row">
+            <label class="capture-toggle-label" title="Skip images, CSS, fonts, video and other static assets">
+              <input type="checkbox" id="skipStaticAssetsCheckbox">
+              <span>Skip static assets <span class="capture-toggle-hint">(.png, .css, .svg, fonts...)</span></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- True pre-transmission interception (Burp-style) lives in the Side Panel,
+             because it uses chrome.debugger which can't share a tab with DevTools. -->
+        <details class="intercept-section" id="interceptSection">
+          <summary>🎯 Intercept</summary>
+          <div class="intercept-body">
+            <p class="intercept-hint">Real request interception (hold ALL requests before they reach the server, Forward / Drop / Race) runs in the <strong>Side Panel</strong> — click the <strong>HackTools++ toolbar icon</strong> to open it. It uses <code>chrome.debugger</code>, which can't run while DevTools is open on the same tab, so it lives outside DevTools.</p>
+          </div>
+        </details>
+
+        <div class="search-filter">
+          <div class="search-input-row">
+            <input type="text" id="searchInput" placeholder="Search URL..." class="search-input" aria-label="Search captured requests">
+            <select id="searchScopeSelect" class="search-scope-select" aria-label="Search scope" title="Where to search">
+              <option value="url">URL</option>
+              <option value="body">Body</option>
+              <option value="headers">Headers</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+          <select id="methodFilter" class="filter-select" aria-label="Filter by HTTP method">
+            <option value="">All Methods</option>
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+            <option value="PATCH">PATCH</option>
+            <option value="WS">WS</option>
+          </select>
+          <select id="statusFilter" class="filter-select" aria-label="Filter by status code">
+            <option value="">All Status</option>
+            <option value="2xx">2xx</option>
+            <option value="3xx">3xx</option>
+            <option value="4xx">4xx</option>
+            <option value="5xx">5xx</option>
+          </select>
+        </div>
+        <div class="scope-block-section">
+          <button type="button" id="scopeBlockToggle" class="scope-block-toggle">
+            <span class="toggle-icon">▼</span> Scope & Block
+          </button>
+          <div id="scopeBlockContent" class="scope-block-content collapsed">
+            <div class="scope-block-group">
+              <label>Scope (capture only these domains)</label>
+              <div class="domain-add-row">
+                <input type="text" id="scopeInput" placeholder="example.com" class="domain-input">
+                <button type="button" id="addScopeBtn" class="btn btn-small">Add</button>
+              </div>
+              <ul id="scopeList" class="domain-list"></ul>
+              <p class="scope-hint">Empty = capture all</p>
+            </div>
+            <div class="scope-block-group">
+              <label>Block (never capture these domains)</label>
+              <div class="domain-add-row">
+                <input type="text" id="blockInput" placeholder="analytics.example.com" class="domain-input">
+                <button type="button" id="addBlockBtn" class="btn btn-small">Add</button>
+              </div>
+              <ul id="blockList" class="domain-list"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul id="requestList" class="request-list"></ul>
+    </aside>
+    <div id="leftResizer" class="panel-resizer" role="separator" aria-orientation="vertical" aria-label="Resize captured requests panel"></div>
+
+    <!-- Center: Request Editor + Response -->
+    <main class="main-content">
+      <div class="mode-tabs" role="tablist" aria-label="Tool panels">
+        <button type="button" id="tab-repeater" role="tab" aria-selected="true" aria-controls="repeaterPanel" class="mode-tab active" data-mode="repeater">Repeater</button>
+        <button type="button" id="tab-intruder" role="tab" aria-selected="false" aria-controls="intruderPanel" class="mode-tab" data-mode="intruder" data-advanced-tab="true">Intruder</button>
+        <button type="button" id="tab-race" role="tab" aria-selected="false" aria-controls="racePanel" class="mode-tab" data-mode="race" data-advanced-tab="true">Race</button>
+        <button type="button" id="tab-decoder" role="tab" aria-selected="false" aria-controls="decoderPanel" class="mode-tab" data-mode="decoder" data-advanced-tab="true">Decoder</button>
+        <button type="button" id="tab-scanner" role="tab" aria-selected="false" aria-controls="scannerPanel" class="mode-tab" data-mode="scanner">Scanner</button>
+        <button type="button" id="tab-tech" role="tab" aria-selected="false" aria-controls="techPanel" class="mode-tab" data-mode="tech" data-advanced-tab="true">Tech Detector</button>
+        <button type="button" id="tab-wordpress" role="tab" aria-selected="false" aria-controls="wordpressPanel" class="mode-tab" data-mode="wordpress" data-advanced-tab="true">WordPress Audit</button>
+        <button type="button" id="tab-secret" role="tab" aria-selected="false" aria-controls="secretPanel" class="mode-tab" data-mode="secret" data-advanced-tab="true">Secret Scanner</button>
+        <button type="button" id="tab-collaborator" role="tab" aria-selected="false" aria-controls="collaboratorPanel" class="mode-tab" data-mode="collaborator" data-advanced-tab="true">Collaborator <span id="collabTabBadge" class="tab-badge hidden"></span></button>
+        <!-- AI Audit hidden (demo done). Code stays dormant; build.js also strips DNR for prod. Remove the style + restore DNR rule to re-enable. -->
+        <button type="button" id="tab-ai-audit" role="tab" aria-selected="false" aria-controls="aiAuditPanel" class="mode-tab" data-mode="ai-audit" data-advanced-tab="true" style="display:none;">AI Audit <span class="beta-badge">BETA</span></button>
+        <button type="button" id="advancedTabsToggleBtn" class="mode-tab mode-tab-toggle" aria-pressed="false" title="Show or hide advanced tools">Advanced</button>
+      </div>
+
+      <div id="repeaterPanel" class="mode-panel" role="tabpanel" aria-labelledby="tab-repeater">
+      <div id="repeaterEditorSection" class="editor-section">
+        <div id="quickStartCard" class="quick-start-card">
+          <div class="quick-start-title">Quick Start</div>
+          <ol class="quick-start-steps">
+            <li>Capture any request from the target site.</li>
+            <li>Click request in Captured Requests list.</li>
+            <li>Edit method/headers/body and click Send.</li>
+          </ol>
+          <button type="button" id="dismissQuickStartBtn" class="btn btn-small btn-secondary">Hide</button>
+        </div>
+        <div class="section-header">
+          <h3>Request Editor</h3>
+          <div class="editor-actions">
+            <button id="sendBtn" class="btn btn-primary">Send</button>
+            <button id="importCurlBtn" class="btn btn-secondary">Import cURL</button>
+            <button id="duplicateTabBtn" class="btn btn-secondary">Duplicate Request</button>
+            <button id="newRepeaterTabBtn" class="btn btn-secondary">+ New Tab</button>
+            <button id="sendToIntruderBtn" class="btn btn-secondary">Send to Intruder</button>
+            <button id="sendToRaceBtn" class="btn btn-secondary">Send to Race</button>
+          </div>
+        </div>
+        <div class="repeater-tabs-bar">
+          <div id="repeaterTabs" class="repeater-tabs"></div>
+        </div>
+        <div class="request-editor">
+          <div class="editor-row">
+            <select id="methodSelect" class="method-select">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+              <option value="PATCH">PATCH</option>
+              <option value="HEAD">HEAD</option>
+              <option value="OPTIONS">OPTIONS</option>
+            </select>
+            <input type="text" id="urlInput" class="url-input" placeholder="https://example.com/api/endpoint">
+          </div>
+          <div class="editor-section-inner">
+            <h4>Headers 
+              <button id="addHeaderBtn" class="btn btn-small">+ Add</button>
+              <select id="headerProfileSelect" style="max-width: 150px; font-size: 10px; padding: 2px 6px !important; margin-left: 10px; height: auto; display: inline-block;">
+                <option value="">— Header Profiles —</option>
+                <option value="bypass">Bypass Mock (X-Forwarded-For)</option>
+                <option value="mobile">User-Agent: Mobile Chrome</option>
+                <option value="json">Content-Type: JSON</option>
+                <option value="xml">Content-Type: XML</option>
+                <option value="cors">CORS Headers</option>
+              </select>
+            </h4>
+            <div id="headersEditor" class="key-value-editor"></div>
+          </div>
+          <div class="editor-section-inner">
+            <h4>Body</h4>
+            <div class="body-tabs">
+              <button class="tab-btn active" data-tab="raw">Raw</button>
+              <button class="tab-btn" data-tab="pretty">Pretty</button>
+            </div>
+            <textarea id="bodyEditor" class="body-editor" placeholder="Request body (JSON, form data, etc.)"></textarea>
+            <textarea id="bodyPrettyView" class="body-editor body-pretty-view hidden"></textarea>
+          </div>
+          <div class="editor-section-inner repeater-history-section">
+            <h4>Request History <button id="clearRepeaterHistoryBtn" class="btn btn-small">Clear</button></h4>
+            <ul id="repeaterHistoryList" class="repeater-history-list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="repeaterResizer" class="panel-resizer-horizontal" role="separator" aria-orientation="horizontal" aria-label="Resize repeater request and response panels"></div>
+      <div id="repeaterResponseSection" class="response-section">
+        <div class="section-header">
+          <h3>Response</h3>
+          <div class="response-meta" id="responseMeta">
+            <span id="statusCode">—</span>
+            <span id="responseSize">—</span>
+            <span id="contentType">—</span>
+          </div>
+        </div>
+        <div class="response-tabs">
+          <button class="tab-btn active" data-tab="pretty">Pretty</button>
+          <button class="tab-btn" data-tab="raw">Raw</button>
+          <button class="tab-btn" data-tab="headers">Headers</button>
+          <button class="tab-btn" data-tab="timing">Timing</button>
+        </div>
+        <div id="responseContent" class="response-content">
+          <pre id="responsePretty" class="response-pretty"></pre>
+          <pre id="responseRaw" class="response-raw hidden"></pre>
+          <pre id="responseHeaders" class="response-headers hidden"></pre>
+          <pre id="responseTiming" class="response-timing hidden"></pre>
+        </div>
+      </div>
+      </div>
+
+      <div id="intruderPanel" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-intruder">
+        <div class="intruder-layout">
+          <div id="intruderConfigPanel" class="intruder-config">
+            <div class="section-header">
+              <h3>Request Template</h3>
+              <p class="intruder-hint">Select any value in the URL, body, or a header, then click <strong>＋ Add §marker§</strong> to mark it — or type §payload§ / $payload$ manually.</p>
+            </div>
+            <div class="intruder-request">
+              <div class="editor-row">
+                <select id="intruderMethod" class="method-select">
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="DELETE">DELETE</option>
+                  <option value="PATCH">PATCH</option>
+                </select>
+                <input type="text" id="intruderUrl" class="url-input" placeholder="https://example.com/api?id=§1§">
+              </div>
+              <div class="editor-section-inner">
+                <h4>Headers <button type="button" id="addIntruderHeaderBtn" class="btn btn-small">+ Add</button></h4>
+                <div id="intruderHeaders" class="key-value-editor"></div>
+              </div>
+              <div class="editor-section-inner">
+                <h4>Body</h4>
+                <div class="body-tabs intruder-body-tabs">
+                  <button type="button" class="tab-btn active" data-tab="raw">Raw</button>
+                  <button type="button" class="tab-btn" data-tab="pretty">Pretty</button>
+                </div>
+                <textarea id="intruderBody" class="body-editor" placeholder='{"id": "§1§"}'></textarea>
+                <textarea id="intruderBodyPrettyView" class="body-editor body-pretty-view hidden"></textarea>
+              </div>
+            </div>
+            <div class="intruder-attack-mode">
+              <label for="intruderAttackMode">Attack mode</label>
+              <select id="intruderAttackMode" class="filter-select">
+                <option value="sniper">Sniper — one position at a time (1 list)</option>
+                <option value="battering-ram">Battering ram — same payload in all positions (1 list)</option>
+                <option value="pitchfork">Pitchfork — parallel iteration (N lists)</option>
+                <option value="cluster-bomb">Cluster bomb — all combinations (N lists)</option>
+              </select>
+              <span class="intruder-attack-mode-hint" id="intruderAttackModeHint"></span>
+            </div>
+
+            <div class="intruder-payloads">
+              <div class="section-header">
+                <h3>Payload sets</h3>
+                <div class="intruder-position-tabs" id="intruderPositionTabs" role="tablist"></div>
+              </div>
+
+              <!-- Per-set config (shown for the active tab) -->
+              <div class="intruder-payload-set-editor">
+                <div class="payload-type-row">
+                  <label for="payloadType">Type</label>
+                  <select id="payloadType" class="filter-select">
+                    <option value="list">Simple list</option>
+                    <option value="numbers">Numbers</option>
+                    <option value="preset">Built-in library</option>
+                    <option value="generator">Generator</option>
+                    <option value="recursive">Recursive (chain from response)</option>
+                  </select>
+                  <button type="button" id="importPayloadFileBtn" class="btn btn-small" title="Import a wordlist file">📄 Import</button>
+                  <input type="file" id="payloadFileInput" accept=".txt,.list,text/plain" hidden>
+                </div>
+
+                <div id="payloadListSection" class="payload-section">
+                  <textarea id="payloadList" class="payload-textarea" placeholder="payload1&#10;payload2&#10;payload3"></textarea>
+                  <span class="payload-count" id="payloadCountList">0 payloads</span>
+                </div>
+
+                <div id="payloadNumbersSection" class="payload-section hidden">
+                  <div class="number-range">
+                    <label>From</label>
+                    <input type="number" id="payloadFrom" placeholder="1" value="1" title="Start value">
+                    <label>To</label>
+                    <input type="number" id="payloadTo" placeholder="100" value="10" title="End value">
+                    <label>Step</label>
+                    <input type="number" id="payloadStep" placeholder="1" value="1" min="1" title="Increment">
+                  </div>
+                </div>
+
+                <div id="payloadPresetSection" class="payload-section hidden">
+                  <select id="payloadPresetSelect" class="filter-select"></select>
+                  <p class="payload-preset-desc" id="payloadPresetDesc"></p>
+                </div>
+
+                <div id="payloadGeneratorSection" class="payload-section hidden">
+                  <select id="payloadGeneratorSelect" class="filter-select"></select>
+                  <div id="payloadGeneratorConfig" class="payload-gen-config"></div>
+                </div>
+
+                <div id="payloadRecursiveSection" class="payload-section hidden">
+                  <p class="intruder-hint">Payload N+1 is extracted from response N via regex. Attack runs sequentially. Best with Sniper mode and a single position.</p>
+                  <div class="payload-gen-config">
+                    <label>Seed payload <input type="text" id="payloadRecursiveSeed" placeholder="Initial value" style="min-width: 180px;"></label>
+                    <label>Extract regex <input type="text" id="payloadRecursivePattern" placeholder="user_(\d+)" style="min-width: 200px;"></label>
+                    <label>Max steps <input type="number" id="payloadRecursiveMax" value="100" min="1" max="10000"></label>
+                    <label>Flags <input type="text" id="payloadRecursiveFlags" value="i" style="max-width: 80px;"></label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Transforms -->
+              <details class="intruder-transforms">
+                <summary>⚙ Transforms <span id="transformCountBadge" class="transform-count-badge"></span></summary>
+                <div class="intruder-transforms-body">
+                  <p class="intruder-hint">Each payload runs through these transforms in order before injection.</p>
+                  <ul id="transformChainList" class="transform-chain-list"></ul>
+                  <div class="transform-add-row">
+                    <select id="transformAddSelect" class="filter-select">
+                      <option value="">— Add transform —</option>
+                    </select>
+                    <input type="text" id="transformAddArg" class="filter-select" placeholder="Argument (if required)" style="display: none;">
+                    <button type="button" id="transformAddBtn" class="btn btn-small">Add</button>
+                  </div>
+                </div>
+              </details>
+
+              <!-- Phase 2: Grep rules -->
+              <details class="intruder-grep">
+                <summary>🔍 Grep rules <span id="grepCountBadge" class="transform-count-badge"></span></summary>
+                <div class="intruder-grep-body">
+                  <p class="intruder-hint">Match adds a ✓ column. Extract adds a value column (uses capture group 1, or full match).</p>
+                  <ul id="grepRulesList" class="transform-chain-list"></ul>
+                  <div class="grep-add-row">
+                    <select id="grepAddType" class="filter-select">
+                      <option value="match">Match</option>
+                      <option value="extract">Extract</option>
+                    </select>
+                    <input type="text" id="grepAddName" placeholder="Column name (e.g. has_token)" class="filter-select">
+                    <input type="text" id="grepAddPattern" placeholder="Regex pattern" class="filter-select">
+                    <input type="text" id="grepAddFlags" placeholder="Flags (default: i)" class="filter-select" style="max-width: 80px;">
+                    <button type="button" id="grepAddBtn" class="btn btn-small">Add</button>
+                  </div>
+                </div>
+              </details>
+
+              <!-- Phase 3: Save/load configs -->
+              <details class="intruder-configs">
+                <summary>💾 Saved attack configs</summary>
+                <div class="intruder-configs-body">
+                  <div class="config-row">
+                    <select id="configLoadSelect" class="filter-select">
+                      <option value="">— Load saved config —</option>
+                    </select>
+                    <button type="button" id="configLoadBtn" class="btn btn-small">Load</button>
+                    <button type="button" id="configDeleteBtn" class="btn btn-small">Delete</button>
+                  </div>
+                  <div class="config-row">
+                    <input type="text" id="configSaveName" placeholder="Name for this config" class="filter-select">
+                    <button type="button" id="configSaveBtn" class="btn btn-small">Save current</button>
+                  </div>
+                </div>
+              </details>
+
+              <!-- Phase 3: Rate-limit backoff -->
+              <div class="intruder-backoff">
+                <label class="ai-audit-toggle-label">
+                  <input type="checkbox" id="intruderBackoffToggle" checked>
+                  <span>Auto-backoff on 429/503 (exponential + jitter, up to 3 retries)</span>
+                </label>
+              </div>
+            </div>
+            <div class="intruder-speed">
+              <label>Speed</label>
+              <div class="speed-row">
+                <span>Concurrency:</span>
+                <input type="number" id="intruderConcurrency" min="1" max="20" value="5" title="Parallel requests (1-20)">
+                <span>Delay (ms):</span>
+                <input type="number" id="intruderDelay" min="0" max="5000" value="0" title="Delay between batches">
+              </div>
+            </div>
+            <div class="intruder-actions">
+              <button type="button" id="startAttackBtn" class="btn btn-primary">Start Attack</button>
+              <button type="button" id="stopAttackBtn" class="btn btn-secondary hidden">Stop</button>
+            </div>
+          </div>
+          <div id="intruderResizer" class="panel-resizer" role="separator" aria-orientation="vertical" aria-label="Resize intruder config and results panels"></div>
+          <div class="intruder-results">
+            <div class="section-header">
+              <h3>Results</h3>
+              <span id="intruderStatus" class="intruder-status"></span>
+            </div>
+            <div class="intruder-results-toolbar">
+              <input type="text" id="intruderResultsSearch" placeholder="Search response body..." class="filter-select" style="flex: 1;">
+              <select id="intruderResultsFilterStatus" class="filter-select" style="max-width: 130px;">
+                <option value="">All status</option>
+                <option value="2xx">2xx only</option>
+                <option value="3xx">3xx only</option>
+                <option value="4xx">4xx only</option>
+                <option value="5xx">5xx only</option>
+                <option value="anomaly">Anomalies only</option>
+              </select>
+              <select id="intruderResultsFilterGrep" class="filter-select" style="max-width: 160px;">
+                <option value="">All matches</option>
+              </select>
+              <button type="button" id="intruderExportCsvBtn" class="btn btn-small" title="Export as CSV">CSV</button>
+              <button type="button" id="intruderExportJsonBtn" class="btn btn-small" title="Export as JSON">JSON</button>
+              <button type="button" id="intruderExportHarBtn" class="btn btn-small" title="Export as HAR">HAR</button>
+              <button type="button" id="intruderClearBtn" class="btn btn-small" title="Clear all results">🗑 Clear</button>
+            </div>
+            <div class="results-table-wrap">
+              <table id="intruderResultsTable" class="results-table">
+                <thead id="intruderResultsHead"></thead>
+                <tbody id="intruderResultsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RACE CONDITION ─────────────────────────────────────────── -->
+      <div id="racePanel" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-race">
+        <div class="intruder-layout">
+          <div id="raceConfigPanel" class="intruder-config">
+            <div class="section-header">
+              <h3>Race Condition Test</h3>
+              <p class="intruder-hint">Fire N identical requests concurrently to detect double-spend, coupon reuse, duplicate creation and other app-logic races. Client-side timing; browser can't do single-packet HTTP/2 sync.</p>
+            </div>
+
+            <div class="intruder-request">
+              <div class="editor-row">
+                <select id="raceMethod" class="method-select">
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="DELETE">DELETE</option>
+                  <option value="PATCH">PATCH</option>
+                </select>
+                <input type="text" id="raceUrl" class="url-input" placeholder="https://example.com/api/redeem">
+              </div>
+              <div class="editor-section-inner">
+                <h4>Headers <span class="intruder-hint-inline">(one per line — <code>Name: Value</code>)</span></h4>
+                <textarea id="raceHeaders" class="body-editor" rows="4" placeholder="Content-Type: application/json&#10;Authorization: Bearer ..."></textarea>
+              </div>
+              <div class="editor-section-inner">
+                <h4>Body</h4>
+                <textarea id="raceBody" class="body-editor" rows="5" placeholder='{"coupon":"SAVE10"}'></textarea>
+              </div>
+            </div>
+
+            <div class="race-config-grid">
+              <div class="race-config-field">
+                <label for="raceCount">Requests</label>
+                <select id="raceCount" class="filter-select">
+                  <option value="2">2</option>
+                  <option value="5">5</option>
+                  <option value="10" selected>10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="custom">Custom…</option>
+                </select>
+                <input type="number" id="raceCountCustom" class="filter-select hidden" min="2" max="200" value="10">
+              </div>
+              <div class="race-config-field">
+                <label for="raceSyncMode">Sync mode</label>
+                <select id="raceSyncMode" class="filter-select">
+                  <option value="synchronized" selected>Synchronized (fire together)</option>
+                  <option value="normal">Normal (immediate)</option>
+                  <option value="delay">Delay offset (staggered)</option>
+                  <option value="jitter">Random jitter</option>
+                </select>
+              </div>
+              <div class="race-config-field hidden" id="raceDelayField">
+                <label for="raceDelayMs" id="raceDelayLabel">Offset (ms)</label>
+                <input type="number" id="raceDelayMs" class="filter-select" min="0" max="1000" value="10">
+              </div>
+              <div class="race-config-field">
+                <label for="raceConcurrency">Max in-flight</label>
+                <input type="number" id="raceConcurrency" class="filter-select" min="1" max="200" value="100" title="Cap simultaneous connections (browsers limit ~6/host on HTTP1.1)">
+              </div>
+            </div>
+
+            <!-- Value templating: substitute a placeholder per request -->
+            <details class="intruder-transforms" id="raceTemplatingDetails">
+              <summary>🔀 Value templating <span id="raceTemplatingBadge" class="transform-count-badge"></span></summary>
+              <div class="intruder-transforms-body">
+                <p class="intruder-hint">Optionally replace a placeholder token in the URL / body / headers with a per-request value. Leave mode = Off for identical requests (the classic double-redeem test).</p>
+                <div class="race-config-grid">
+                  <div class="race-config-field">
+                    <label for="raceTplToken">Placeholder</label>
+                    <input type="text" id="raceTplToken" class="filter-select" value="{{VAL}}" placeholder="{{VAL}}">
+                  </div>
+                  <div class="race-config-field">
+                    <label for="raceTplMode">Mode</label>
+                    <select id="raceTplMode" class="filter-select">
+                      <option value="off" selected>Off (identical requests)</option>
+                      <option value="static">Static (one value, all requests)</option>
+                      <option value="increment">Increment (base + index)</option>
+                      <option value="uuid">UUID (unique per request)</option>
+                      <option value="timestamp">Timestamp (unique per request)</option>
+                      <option value="list">List (one value per line)</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="raceTplStaticField" class="race-config-field hidden">
+                  <label for="raceTplStatic">Value</label>
+                  <input type="text" id="raceTplStatic" class="filter-select" placeholder="SAVE10">
+                </div>
+                <div id="raceTplIncrementField" class="race-config-grid hidden">
+                  <div class="race-config-field"><label for="raceTplBase">Base</label><input type="number" id="raceTplBase" class="filter-select" value="1"></div>
+                  <div class="race-config-field"><label for="raceTplStep">Step</label><input type="number" id="raceTplStep" class="filter-select" value="1"></div>
+                </div>
+                <div id="raceTplListField" class="race-config-field hidden">
+                  <label for="raceTplList">Values (one per line — extra requests reuse the last)</label>
+                  <textarea id="raceTplList" class="body-editor" rows="4" placeholder="COUPON-A&#10;COUPON-B&#10;COUPON-C"></textarea>
+                </div>
+              </div>
+            </details>
+
+            <div class="race-arm-row">
+              <label class="ai-audit-toggle-label">
+                <input type="checkbox" id="raceWarmToggle" checked>
+                <span>Warm up connection first <small>(open TCP/TLS/HTTP-2 to the origin before firing, so the batch isn't staggered by connection setup — big help on HTTP/2 targets; HTTP/1.1 is still browser-capped at ~6 conns)</small></span>
+              </label>
+              <label class="ai-audit-toggle-label" style="margin-top:6px;">
+                <input type="checkbox" id="raceArmToggle">
+                <span>Arm before firing <small>(prepare all requests, then release them together on click — fire exactly when the app is in the right state)</small></span>
+              </label>
+            </div>
+
+            <div class="intruder-actions">
+              <button type="button" id="raceStartBtn" class="btn btn-primary">Start Race</button>
+              <button type="button" id="raceReleaseBtn" class="btn btn-primary hidden">🚀 Release <span id="raceReleaseCount"></span></button>
+              <button type="button" id="raceStopBtn" class="btn btn-secondary hidden">Stop</button>
+              <button type="button" id="raceExportJsonBtn" class="btn btn-secondary">Export JSON</button>
+              <button type="button" id="raceExportCsvBtn" class="btn btn-secondary">Export CSV</button>
+              <button type="button" id="raceClearBtn" class="btn btn-secondary">🗑 Clear</button>
+            </div>
+          </div>
+
+          <div id="raceResizer" class="panel-resizer" role="separator" aria-orientation="vertical" aria-label="Resize race config and results"></div>
+
+          <div class="intruder-results">
+            <div class="section-header">
+              <h3>Results</h3>
+              <span id="raceStatus" class="intruder-status"></span>
+            </div>
+            <div id="raceDashboard" class="race-dashboard"></div>
+            <div id="raceVerdict" class="race-verdict"></div>
+            <div class="results-table-wrap">
+              <table class="results-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Status</th>
+                    <th>Length</th>
+                    <th>Duration (ms)</th>
+                    <th>Send +ms</th>
+                    <th>Body / Δ Baseline</th>
+                    <th>Response</th>
+                  </tr>
+                </thead>
+                <tbody id="raceResultsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="decoderPanel" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-decoder">
+        <div class="decoder-layout">
+          <div class="decoder-section">
+            <div class="section-header">
+              <h3>Input</h3>
+              <div class="decoder-actions">
+                <select id="decoderFormat" class="filter-select">
+                  <option value="base64">Base64</option>
+                  <option value="url">URL</option>
+                  <option value="hex">Hex</option>
+                  <option value="html">HTML Entities</option>
+                  <option value="jwt">JWT</option>
+                  <option value="rot13">ROT13</option>
+                  <option value="md5">MD5 (Hash)</option>
+                  <option value="sha1">SHA-1 (Hash)</option>
+                  <option value="sha256">SHA-256 (Hash)</option>
+                </select>
+                <button type="button" id="decodeBtn" class="btn btn-primary">Decode</button>
+                <button type="button" id="encodeBtn" class="btn btn-secondary">Encode</button>
+              </div>
+            </div>
+            <textarea id="decoderInput" class="decoder-textarea" placeholder="Paste encoded/decoded text here..."></textarea>
+          </div>
+          <div class="decoder-section">
+            <div class="section-header">
+              <h3>Output</h3>
+              <button type="button" id="copyDecodedBtn" class="btn btn-small">Copy</button>
+            </div>
+            <textarea id="decoderOutput" class="decoder-textarea" placeholder="Result will appear here..." readonly></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div id="collaboratorPanel" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-collaborator">
+        <div class="collab-layout">
+          <!-- Left column: connection + payloads -->
+          <div class="collab-side">
+            <div class="collab-card">
+              <div class="section-header">
+                <h3>🛰️ Collaborator <span class="beta-badge">Interactsh</span></h3>
+                <span id="collabStatus" class="collab-status collab-status-off">Not connected</span>
+              </div>
+              <div class="collab-mode-row">
+                <label class="collab-radio"><input type="radio" name="collabMode" value="hosted" checked> Hosted</label>
+                <label class="collab-radio"><input type="radio" name="collabMode" value="selfhosted"> Self-hosted</label>
+              </div>
+              <div id="collabHostedRow" class="collab-field">
+                <label>Server</label>
+                <select id="collabHostedServer" class="filter-select">
+                  <option value="oast.pro">oast.pro</option>
+                  <option value="oast.fun">oast.fun</option>
+                  <option value="oast.site">oast.site</option>
+                  <option value="oast.live">oast.live</option>
+                  <option value="oast.online">oast.online</option>
+                  <option value="oast.me">oast.me</option>
+                </select>
+              </div>
+              <div id="collabSelfRow" class="collab-field hidden">
+                <label>Server URL</label>
+                <input type="text" id="collabSelfUrl" class="collab-input" placeholder="https://interact.example.com">
+                <label>Auth token (optional)</label>
+                <input type="password" id="collabSelfToken" class="collab-input" placeholder="token for -auth/-token servers">
+              </div>
+              <div class="collab-field collab-field-inline">
+                <label>Poll every</label>
+                <input type="number" id="collabPollInterval" class="collab-input collab-input-sm" value="5" min="2" max="120">
+                <span class="collab-unit">sec</span>
+                <label class="collab-checkbox"><input type="checkbox" id="collabAutoRefresh" checked> Auto-refresh</label>
+              </div>
+              <div class="collab-btn-row">
+                <button type="button" id="collabConnectBtn" class="btn btn-primary">Connect</button>
+                <button type="button" id="collabDisconnectBtn" class="btn btn-secondary" disabled>Disconnect</button>
+                <button type="button" id="collabPollNowBtn" class="btn btn-small" disabled>Poll now</button>
+              </div>
+            </div>
+
+            <div class="collab-card collab-card-grow">
+              <div class="section-header">
+                <h3>Payloads</h3>
+                <div class="collab-inline-actions">
+                  <select id="collabPayloadProto" class="filter-select">
+                    <option value="https">HTTPS</option>
+                    <option value="http">HTTP</option>
+                    <option value="dns">DNS (host only)</option>
+                  </select>
+                  <button type="button" id="collabGenBtn" class="btn btn-primary" disabled>Generate Payload</button>
+                </div>
+              </div>
+              <ul id="collabPayloadList" class="collab-payload-list"></ul>
+            </div>
+          </div>
+
+          <!-- Right column: interactions + detail -->
+          <div class="collab-main">
+            <div class="section-header">
+              <h3>Interactions <span id="collabInteractionCount" class="collab-count"></span></h3>
+              <div class="collab-inline-actions">
+                <input type="text" id="collabSearch" class="search-input" placeholder="filter interactions…">
+                <select id="collabProtoFilter" class="filter-select">
+                  <option value="">All protocols</option>
+                  <option value="dns">DNS</option>
+                  <option value="http">HTTP</option>
+                  <option value="smtp">SMTP</option>
+                  <option value="ldap">LDAP</option>
+                  <option value="ftp">FTP</option>
+                </select>
+                <button type="button" id="collabExportBtn" class="btn btn-small">Export</button>
+                <button type="button" id="collabClearBtn" class="btn btn-small">Clear</button>
+              </div>
+            </div>
+            <div class="collab-inter-wrap">
+              <table class="collab-inter-table">
+                <thead><tr><th>Time</th><th>Protocol</th><th>Remote IP</th><th>Payload / Host</th></tr></thead>
+                <tbody id="collabInteractionRows"></tbody>
+              </table>
+            </div>
+            <div id="collabDetail" class="collab-detail"><div class="collab-detail-empty">Select an interaction to view details.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="scannerPanel" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-scanner">
+        <div class="scanner-layout">
+          <div class="section-header">
+            <h3>Client-Side Security Scan</h3>
+            <div class="scanner-actions">
+              <label class="scanner-auto-toggle">
+                <input type="checkbox" id="scannerAutoToggle" checked>
+                <span>Auto Scan</span>
+              </label>
+              <select id="scannerSeverityFilter" class="filter-select scanner-filter-select">
+                <option value="">All Severities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <input id="scannerSearchInput" class="search-input scanner-search-input" placeholder="Search findings..." aria-label="Search scanner findings">
+              <button type="button" id="exportScannerJsonBtn" class="btn btn-secondary">Export JSON</button>
+              <button type="button" id="exportScannerCsvBtn" class="btn btn-secondary">Export CSV</button>
+              <button type="button" id="runScanBtn" class="btn btn-primary">Run Scan</button>
+            </div>
+          </div>
+          <div id="scannerMeta" class="scanner-meta"></div>
+          <div id="scannerSuppressions" class="scanner-suppressions hidden"></div>
+          <div id="scannerResults" class="scanner-results"></div>
+        </div>
+      </div>
+
+      <div id="techPanel" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-tech">
+        <div class="scanner-layout">
+          <div class="section-header">
+            <h3>Technology Detector (Passive)</h3>
+            <div class="scanner-actions">
+              <label class="scanner-auto-toggle">
+                <input type="checkbox" id="techLiveCveToggle">
+                Live CVE
+              </label>
+              <button type="button" id="runTechDetectBtn" class="btn btn-primary">Run Detect</button>
+              <button type="button" id="enrichTechCveBtn" class="btn btn-secondary">Enrich CVEs</button>
+              <button type="button" id="clearTechCveCacheBtn" class="btn btn-secondary">Clear CVE Cache</button>
+              <button type="button" id="copyTechReconBtn" class="btn btn-secondary">Copy Recon Bundle</button>
+              <button type="button" id="exportTechJsonBtn" class="btn btn-secondary">Export JSON</button>
+              <button type="button" id="exportTechCsvBtn" class="btn btn-secondary">Export CSV</button>
+            </div>
+          </div>
+          <div id="techMeta" class="scanner-meta"></div>
+          <div id="techResults" class="scanner-results"></div>
+        </div>
+      </div>
+
+      <div id="wordpressPanel" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-wordpress">
+        <div class="scanner-layout">
+          <div class="section-header">
+            <h3>WordPress Audit (Passive MVP)</h3>
+            <div class="scanner-actions">
+              <button type="button" id="runWordpressAuditBtn" class="btn btn-primary">Run Audit</button>
+              <button type="button" id="runWordpressEndpointScanBtn" class="btn btn-secondary">Run Endpoint Scan</button>
+              <button type="button" id="stopWordpressEndpointScanBtn" class="btn btn-secondary hidden">Stop Scan</button>
+              <button type="button" id="importWordpressWordlistBtn" class="btn btn-secondary">Import Wordlist</button>
+              <input type="file" id="wordpressWordlistFileInput" accept=".txt,.lst,.list,.csv" class="hidden">
+              <button type="button" id="exportWordpressJsonBtn" class="btn btn-secondary">Export JSON</button>
+              <button type="button" id="exportWordpressCsvBtn" class="btn btn-secondary">Export CSV</button>
+            </div>
+          </div>
+          <div class="ws-config-row">
+            <input id="wordpressBaseUrlInput" class="search-input ws-replace-input" placeholder="Base URL (optional) e.g. https://target.com/" aria-label="WordPress scan base URL">
+            <select id="wordpressEnumModeSelect" class="filter-select scanner-filter-select">
+              <option value="passive" selected>Passive only</option>
+              <option value="safe-active">Safe active</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+            <label class="scanner-auto-toggle">
+              <input type="checkbox" id="wordpressIncludeStaticToggle">
+              Include static assets
+            </label>
+          </div>
+          <textarea id="wordpressWordlistInput" class="payload-textarea" placeholder="Optional custom wordlist (one endpoint path per line). Example:&#10;wp-login.php&#10;xmlrpc.php&#10;wp-json/wp/v2/users"></textarea>
+          <div class="ws-config-row">
+            <select id="wordpressEndpointStatusFilter" class="filter-select scanner-filter-select">
+              <option value="">All Status</option>
+              <option value="2xx">2xx</option>
+              <option value="3xx">3xx</option>
+              <option value="4xx">4xx</option>
+              <option value="5xx">5xx</option>
+              <option value="other">Other</option>
+            </select>
+            <input id="wordpressEndpointSearchInput" class="search-input ws-replace-input" placeholder="Search path, url, note..." aria-label="Search WordPress endpoint results">
+          </div>
+          <div id="wordpressMeta" class="scanner-meta"></div>
+          <div id="wordpressResults" class="scanner-results"></div>
+          <div id="wordpressEndpointResults" class="scanner-results"></div>
+        </div>
+      </div>
+
+      <div id="secretPanel" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-secret">
+        <div class="scanner-layout">
+          <div class="section-header">
+            <h3>AI Secret Scanner (Local)</h3>
+            <div class="scanner-actions">
+              <label class="scanner-auto-toggle">
+                <input type="checkbox" id="secretApiJsonToggle">
+                Scan API JSON
+              </label>
+              <select id="secretRulePackSelect" class="filter-select scanner-filter-select">
+                <option value="core">Core Rules</option>
+                <option value="extended" selected>Extended Rules</option>
+                <option value="aggressive">Aggressive Rules</option>
+              </select>
+              <label class="scanner-auto-toggle" title="May send detected secrets to provider APIs for validation">
+                <input type="checkbox" id="secretRemoteValidationToggle">
+                Remote Validate (Dangerous)
+              </label>
+              <select id="secretDomainFilter" class="filter-select scanner-filter-select">
+                <option value="">All Domains</option>
+              </select>
+              <select id="secretTypeFilter" class="filter-select scanner-filter-select">
+                <option value="">All Secret Types</option>
+              </select>
+              <select id="secretConfidenceFilter" class="filter-select scanner-filter-select">
+                <option value="">All Confidence</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <input id="secretSearchInput" class="search-input scanner-search-input" placeholder="Search files, types, snippets..." aria-label="Search secret findings">
+              <div class="secret-columns-control">
+                <button type="button" id="secretColumnsToggleBtn" class="btn btn-secondary">Columns</button>
+                <div id="secretColumnsMenu" class="secret-columns-menu hidden">
+                  <label><input type="checkbox" data-secret-col="type" checked> Secret Type</label>
+                  <label><input type="checkbox" data-secret-col="confidence" checked> Confidence</label>
+                  <label><input type="checkbox" data-secret-col="domain" checked> Domain</label>
+                  <label><input type="checkbox" data-secret-col="fileKind" checked> File Kind</label>
+                  <label><input type="checkbox" data-secret-col="filePath" checked> File Path</label>
+                  <label><input type="checkbox" data-secret-col="value" checked> Value</label>
+                  <label><input type="checkbox" data-secret-col="action" checked> Action</label>
+                </div>
+              </div>
+              <button type="button" id="exportSecretJsonBtn" class="btn btn-secondary">Export JSON</button>
+              <button type="button" id="exportSecretCsvBtn" class="btn btn-secondary">Export CSV</button>
+              <button type="button" id="copySecretMdBtn" class="btn btn-secondary">Copy Markdown</button>
+              <button type="button" id="validateSecretVisibleBtn" class="btn btn-secondary">Validate Visible</button>
+              <button type="button" id="clearSecretFindingsBtn" class="btn btn-secondary">Clear</button>
+            </div>
+          </div>
+          <div id="secretMeta" class="scanner-meta"></div>
+          <div id="secretResults" class="scanner-results"></div>
+        </div>
+      </div>
+
+      <!-- ── AI AUDIT ─────────────────────────────────────────────────── -->
+      <div id="aiAuditPanel" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-ai-audit">
+        <div class="section ai-audit-section">
+          <div class="section-header">
+            <h3>AI Security Audit <span class="beta-badge">BETA</span></h3>
+            <p class="section-hint">Send in-scope captured requests to Claude for OWASP API Top 10 vulnerability analysis. API key stays on this device only.</p>
+          </div>
+          <div class="ai-audit-testing-banner">
+            ⚠ This feature is still in testing. Findings may include false positives or miss issues — always verify manually before acting on them.
+          </div>
+
+          <details class="ai-audit-settings" id="aiAuditSettingsDetails" open>
+            <summary>⚙ Settings</summary>
+            <div class="ai-audit-settings-body">
+              <div class="ai-audit-field">
+                <label>Authentication method</label>
+                <div class="ai-audit-radio-group" role="radiogroup">
+                  <label class="ai-audit-radio">
+                    <input type="radio" name="aiAuditAuthMethod" value="api-key" id="aiAuditAuthApiKey">
+                    <span>Anthropic API Key <small>(pay-per-use, console.anthropic.com)</small></span>
+                  </label>
+                  <label class="ai-audit-radio">
+                    <input type="radio" name="aiAuditAuthMethod" value="claude-code-oauth" id="aiAuditAuthOauth">
+                    <span>Claude Code OAuth Token <small>(uses your Claude.ai subscription quota)</small></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="ai-audit-field">
+                <label for="aiAuditApiKey" id="aiAuditApiKeyLabel">Anthropic API Key</label>
+                <div class="ai-audit-field-row">
+                  <input type="password" id="aiAuditApiKey" autocomplete="off" placeholder="sk-ant-api03-..." aria-label="Anthropic API key">
+                  <button type="button" id="aiAuditApiKeyToggleVisibility" class="btn btn-small" title="Show or hide API key">👁</button>
+                </div>
+                <p class="ai-audit-hint" id="aiAuditApiKeyHint">Stored only in chrome.storage.local — never synced.</p>
+              </div>
+
+              <div class="ai-audit-field">
+                <label for="aiAuditModelSelect">Model</label>
+                <select id="aiAuditModelSelect">
+                  <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — balanced (recommended)</option>
+                  <option value="claude-opus-4-8">Claude Opus 4.8 — deepest analysis (5× cost)</option>
+                  <option value="claude-haiku-4-5">Claude Haiku 4.5 — cheapest, faster</option>
+                </select>
+              </div>
+
+              <div class="ai-audit-field">
+                <label>Audit-scope domains <span class="ai-audit-hint-inline">(only these will be sent to Claude)</span></label>
+                <div class="ai-audit-domain-row">
+                  <select id="aiAuditScopeSelect" aria-label="Pick a domain from captured requests">
+                    <option value="">— Pick from captured domains —</option>
+                  </select>
+                  <button type="button" id="aiAuditAddScopeBtn" class="btn btn-small">Add</button>
+                </div>
+                <ul id="aiAuditScopeList" class="domain-list"></ul>
+                <p class="ai-audit-hint">Leave empty to use the global capture scope.</p>
+              </div>
+
+              <div class="ai-audit-field ai-audit-field-row-2col">
+                <div>
+                  <label for="aiAuditMaxRequestsInput">Max requests per audit</label>
+                  <input type="number" id="aiAuditMaxRequestsInput" min="1" max="50" step="1">
+                </div>
+                <div>
+                  <label for="aiAuditMaxBodyCharsInput">Max body chars (per request)</label>
+                  <input type="number" id="aiAuditMaxBodyCharsInput" min="500" max="20000" step="500">
+                </div>
+              </div>
+
+              <div class="ai-audit-field">
+                <label class="ai-audit-toggle-label">
+                  <input type="checkbox" id="aiAuditRedactToggle">
+                  <span>Redact <code>Authorization</code> / <code>Cookie</code> values before sending</span>
+                </label>
+              </div>
+
+              <div class="ai-audit-field">
+                <label>Skill library <span class="ai-audit-hint-inline">(optional focus areas / techniques to guide Claude)</span></label>
+                <ul id="aiAuditSkillsList" class="ai-audit-skills-list"></ul>
+                <div class="ai-audit-skills-actions">
+                  <button type="button" id="aiAuditAddSkillBtn" class="btn btn-small">+ Add Skill</button>
+                  <button type="button" id="aiAuditUploadSkillBtn" class="btn btn-small">📄 Upload File</button>
+                  <button type="button" id="aiAuditUploadFolderBtn" class="btn btn-small">📁 Upload Folder</button>
+                  <input type="file" id="aiAuditSkillFileInput" accept=".md,.txt,.markdown,text/plain,text/markdown" hidden>
+                  <input type="file" id="aiAuditSkillFolderInput" webkitdirectory directory multiple hidden>
+                </div>
+                <label class="ai-audit-toggle-label" style="margin-top: 8px;">
+                  <input type="checkbox" id="aiAuditSmartSelectionToggle">
+                  <span>Smart skill selection <small>(Claude picks relevant skills per audit — adds ~$0.005 + 3s)</small></span>
+                </label>
+                <p class="ai-audit-hint">Build a library by uploading a folder of <code>.md</code> files. With smart selection on, Claude auto-picks only the skills relevant to the captured traffic — useful when you have 20+ skills.</p>
+              </div>
+            </div>
+          </details>
+
+          <!-- Skill editor inline (hidden by default) -->
+          <div id="aiAuditSkillEditor" class="ai-audit-skill-editor hidden" role="dialog" aria-labelledby="aiAuditSkillEditorTitle">
+            <h4 id="aiAuditSkillEditorTitle">Add Skill</h4>
+            <div class="ai-audit-field">
+              <label for="aiAuditSkillNameInput">Name</label>
+              <input type="text" id="aiAuditSkillNameInput" placeholder="e.g. GraphQL focus, Race condition checklist" maxlength="60">
+            </div>
+            <div class="ai-audit-field">
+              <label for="aiAuditSkillContentInput">Content <span class="ai-audit-hint-inline">(plain text or Markdown, up to 50,000 chars — about 12K tokens)</span></label>
+              <textarea id="aiAuditSkillContentInput" rows="10" placeholder="Focus areas, attack techniques, OWASP categories to prioritize..."></textarea>
+              <p class="ai-audit-hint"><span id="aiAuditSkillCharCount">0</span> / 50,000 chars</p>
+            </div>
+            <div class="ai-audit-skill-editor-actions">
+              <button type="button" id="aiAuditSkillSaveBtn" class="btn btn-primary">Save</button>
+              <button type="button" id="aiAuditSkillCancelBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+          </div>
+
+          <div class="ai-audit-action-bar">
+            <div class="ai-audit-preflight" id="aiAuditPreflight">No requests in audit scope yet.</div>
+            <div class="ai-audit-buttons">
+              <button type="button" id="aiAuditRunBtn" class="btn btn-primary" disabled>Run AI Audit</button>
+              <button type="button" id="aiAuditStopBtn" class="btn btn-secondary hidden">Stop</button>
+              <button type="button" id="aiAuditClearBtn" class="btn btn-secondary">Clear Findings</button>
+            </div>
+          </div>
+
+          <div id="aiAuditMeta" class="scanner-meta"></div>
+          <div id="aiAuditFindings" class="ai-audit-findings"></div>
+        </div>
+      </div>
+
+    </main>
+    <!-- TESTING: AI Assist sidebar + resizer hidden during testing phase -->
+    <div id="rightResizer" class="panel-resizer" role="separator" aria-orientation="vertical" aria-label="Resize AI assist panel" style="display:none;"></div>
+
+    <!-- Right Sidebar: AI Assist -->
+    <aside id="aiSidebar" class="sidebar ai-sidebar" style="display:none;">
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <h2>AI Assist</h2>
+          <button type="button" id="toggleAiSidebarBtn" class="sidebar-toggle-btn" title="Minimize AI Assist">»</button>
+        </div>
+      </div>
+      <div class="ai-content">
+        <div class="ai-section">
+          <h4>Endpoint Analysis</h4>
+          <p id="endpointAnalysis" class="ai-placeholder">
+            Select a request to see endpoint analysis...
+          </p>
+        </div>
+        <div class="ai-section">
+          <h4>Security Test Suggestions</h4>
+          <ul id="securitySuggestions" class="security-list">
+            <li>SQL Injection</li>
+            <li>IDOR (Insecure Direct Object Reference)</li>
+            <li>Auth Bypass</li>
+            <li>Rate Limit Tests</li>
+          </ul>
+        </div>
+        <div class="privacy-note">
+          Privacy: analysis runs locally in DevTools by default. Remote validation is opt-in.
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="contextMenu" class="context-menu hidden">
+    <button type="button" class="context-menu-item" data-action="copy-curl">
+      Copy as cURL
+    </button>
+    <button type="button" class="context-menu-item" data-action="download-curl">
+      Download as cURL
+    </button>
+    <button type="button" class="context-menu-item" data-action="send-to-decoder">
+      Send to Decoder
+    </button>
+  </div>
+
+  <div id="intruderResultModal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <h4>Response #<span id="resultModalIndex"></span></h4>
+      <p class="modal-meta"><span id="resultModalStatus"></span> · <span id="resultModalLength"></span> · <span id="resultModalTime"></span>ms</p>
+      <pre id="resultModalBody" class="result-modal-body"></pre>
+      <div class="modal-actions">
+        <button type="button" id="resultModalClose" class="btn btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="copyModal" class="modal hidden">
+    <div class="modal-content">
+      <h4>Copy cURL command</h4>
+      <p class="modal-hint">Select all (Ctrl+A) and copy (Ctrl+C)</p>
+      <textarea id="copyModalText" class="copy-modal-text" readonly></textarea>
+      <div class="modal-actions">
+        <button type="button" id="copyModalClose" class="btn btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="curlImportModal" class="modal hidden">
+    <div class="modal-content">
+      <h4>Import cURL Command</h4>
+      <p class="modal-hint">Paste a raw cURL command to populate the Request Editor</p>
+      <textarea id="curlImportText" class="copy-modal-text" placeholder="curl -X POST 'https://...' -H '...' -d '...'"></textarea>
+      <div class="modal-actions">
+        <button type="button" id="curlImportSubmit" class="btn btn-primary">Import</button>
+        <button type="button" id="curlImportClose" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="panel.js"></script>
+</body>
+</html>

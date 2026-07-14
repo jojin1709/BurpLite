@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BurpLite Intercept</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body class="sidepanel-body">
+  <div class="sp-header">
+    <h1>🎯 Intercept</h1>
+    <span id="spTarget" class="sp-target">no tab</span>
+  </div>
+
+  <div class="sp-bar">
+    <button type="button" id="spToggle" class="btn intercept-toggle">Intercept: OFF</button>
+  </div>
+  <div class="sp-bar">
+    <button type="button" id="spForwardAll" class="btn btn-small">→ Forward all</button>
+    <button type="button" id="spDropAll" class="btn btn-small">✕ Drop all</button>
+    <input type="text" id="spFilter" class="search-input" placeholder="filter: URL contains… (blank = all)">
+  </div>
+
+  <p id="spStatus" class="sp-status">Turn Intercept ON to hold this tab's requests before they reach the server.</p>
+
+  <div class="sp-queue-head">Held queue <span id="spCount" class="sp-badge"></span></div>
+  <ul id="spQueue" class="sp-queue"></ul>
+
+  <!-- Request detail / editor -->
+  <div id="spDetail" class="sp-detail hidden">
+    <div class="sp-detail-head">
+      <span id="spDetailTitle"></span>
+      <button type="button" id="spDetailClose" class="btn-icon">×</button>
+    </div>
+    <label>URL</label>
+    <input type="text" id="spEditUrl" class="sp-edit-input">
+    <label>Method</label>
+    <input type="text" id="spEditMethod" class="sp-edit-input">
+    <label>Headers (one per line — Name: Value)</label>
+    <textarea id="spEditHeaders" class="sp-edit-area" rows="5"></textarea>
+    <label>Body</label>
+    <textarea id="spEditBody" class="sp-edit-area" rows="5"></textarea>
+    <div class="sp-detail-actions">
+      <button type="button" id="spForwardOne" class="btn btn-primary">→ Forward</button>
+      <button type="button" id="spSendRace" class="btn btn-primary">🚀 Send to Race tab</button>
+      <button type="button" id="spDropOne" class="btn btn-secondary">✕ Drop</button>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
