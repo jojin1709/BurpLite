@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BurpLite - Premium Web Security Testing Tool</title>
+    <meta name="description" content="BurpLite is a modern, high-contrast, premium DevTools extension designed for security professionals and bug bounty hunters. Built by JOJIN JOHN.">
+    <link rel="icon" type="image/png" href="icons/icon128.png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Neon Background Gradients -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="container header-container">
+            <div class="logo-wrapper">
+                <img src="icons/icon128.png" alt="BurpLite Logo" class="header-logo">
+                <span class="logo-text">BurpLite</span>
+            </div>
+            <nav class="nav">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#playground" class="nav-link">Playground</a>
+                <a href="#screenshots" class="nav-link">Screenshots</a>
+                <a href="#installation" class="nav-link">Install</a>
+            </nav>
+            <div class="header-actions">
+                <a href="https://github.com/jojin1709/BurpLite" class="btn btn-secondary">GitHub</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-container">
+            <div class="hero-content">
+                <div class="badge">Version 2.0.5 Released</div>
+                <h1 class="hero-title">Elevate Your <span class="text-glow">Bug Bounty</span> Workflow</h1>
+                <p class="hero-subtitle">A modern, lightning-fast Chrome & Firefox DevTools extension for real-time request intercepting, editing, fuzzing, and decoding.</p>
+                <div class="hero-btns">
+                    <a href="#installation" class="btn btn-primary">Get Started</a>
+                    <a href="https://github.com/jojin1709/BurpLite" class="btn btn-secondary">View Source</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="glass-card visual-card">
+                    <div class="card-header">
+                        <div class="dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <div class="address-bar">BurpLite Interceptor Panel</div>
+                    </div>
+                    <img src="icons/screenshot_repeater.png" alt="BurpLite Repeater Preview" class="visual-img">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Designed for Hunters & Audit Teams</h2>
+                <p class="section-desc">Loaded with native advanced security testing tools engineered directly into your browser DevTools layout.</p>
+            </div>
+            <div class="features-grid">
+                <!-- Feature 1 -->
+                <div class="glass-card feature-card">
+                    <div class="feature-icon icon-cyan">⚡</div>
+                    <h3 class="feature-name">Repeater & cURL Import</h3>
+                    <p class="feature-text">Interchange HTTP methods instantly. Paste raw cURL commands to populate the composer or use preloaded security header profiles to bypass controls.</p>
+                </div>
+                <!-- Feature 2 -->
+                <div class="glass-card feature-card">
+                    <div class="feature-icon icon-magenta">🎯</div>
+                    <h3 class="feature-name">Intruder & Fuzzer</h3>
+                    <p class="feature-text">Automate brute force attacks, parameter fuzzing, and security audits with custom payloads, generators, and response regex grepping.</p>
+                </div>
+                <!-- Feature 3 -->
+                <div class="glass-card feature-card">
+                    <div class="feature-icon icon-amber">🔐</div>
+                    <h3 class="feature-name">Multi-Format Decoder</h3>
+                    <p class="feature-text">Encode or decode Base64, URL encoding, Hex, HTML Entities, ROT13, and parse JSON Web Tokens (JWT) side-by-side.</p>
+                </div>
+                <!-- Feature 4 -->
+                <div class="glass-card feature-card">
+                    <div class="feature-icon icon-green">🛡️</div>
+                    <h3 class="feature-name">Native Crypto Hashers</h3>
+                    <p class="feature-text">Instantly calculate MD5, SHA-1, and SHA-256 hashes using high-speed native browser Cryptography APIs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Playground -->
+    <section id="playground" class="playground section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Interactive <span class="text-glow">Utility Playground</span></h2>
+                <p class="section-desc">Try out BurpLite's core utility algorithms directly from this landing page in real time.</p>
+            </div>
+            <div class="glass-card playground-card">
+                <div class="playground-tabs">
+                    <button class="play-tab active" data-play-tab="decoder">Mini Decoder</button>
+                    <button class="play-tab" data-play-tab="curl">cURL Parser</button>
+                </div>
+                <div class="playground-body">
+                    <!-- Decoder Tool -->
+                    <div class="play-panel" id="play-decoder">
+                        <div class="editor-grid">
+                            <div class="editor-col">
+                                <label class="editor-label">Input String</label>
+                                <textarea id="demo-input" class="editor-textarea" placeholder="Type text here to transform..."></textarea>
+                            </div>
+                            <div class="editor-col">
+                                <div class="options-row">
+                                    <label class="editor-label">Algorithm</label>
+                                    <select id="demo-algo" class="editor-select">
+                                        <option value="base64-encode">Base64 Encode</option>
+                                        <option value="base64-decode">Base64 Decode</option>
+                                        <option value="rot13">ROT13 Cipher</option>
+                                        <option value="url-encode">URL Encode</option>
+                                        <option value="url-decode">URL Decode</option>
+                                        <option value="hex-encode">Hex Encode</option>
+                                        <option value="hex-decode">Hex Decode</option>
+                                    </select>
+                                </div>
+                                <label class="editor-label">Output Result</label>
+                                <textarea id="demo-output" class="editor-textarea readonly" readonly placeholder="Output will appear here..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- cURL Tool -->
+                    <div class="play-panel hidden" id="play-curl">
+                        <div class="editor-grid">
+                            <div class="editor-col">
+                                <label class="editor-label">Paste cURL Command</label>
+                                <textarea id="demo-curl-input" class="editor-textarea" placeholder="curl -X POST https://api.target.com/v1/auth -H 'Content-Type: application/json' -d '{\"username\":\"admin\"}'"></textarea>
+                                <button id="demo-parse-btn" class="btn btn-primary btn-full">Parse Command</button>
+                            </div>
+                            <div class="editor-col">
+                                <label class="editor-label">Parsed Result</label>
+                                <div class="parsed-results-box" id="demo-parsed-results">
+                                    <span class="placeholder-text">Paste a cURL command on the left and click parse.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Gallery -->
+    <section id="screenshots" class="screenshots section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Interface Showcase</h2>
+                <p class="section-desc">Experience the obsidian cyber-glow theme built to prevent eye strain during long-night bounty hunts.</p>
+            </div>
+            <div class="gallery-grid">
+                <!-- Screenshot 1 -->
+                <div class="glass-card gallery-card" onclick="openLightbox('icons/screenshot_repeater.png', 'Repeater Editor with cURL Import')">
+                    <img src="icons/screenshot_repeater.png" alt="Repeater Screen" class="gallery-img">
+                    <div class="gallery-overlay">
+                        <span class="gallery-text">Repeater Editor</span>
+                    </div>
+                </div>
+                <!-- Screenshot 2 -->
+                <div class="glass-card gallery-card" onclick="openLightbox('icons/screenshot_intruder_view.png', 'Intruder Attack Config')">
+                    <img src="icons/screenshot_intruder_view.png" alt="Intruder Screen" class="gallery-img">
+                    <div class="gallery-overlay">
+                        <span class="gallery-text">Intruder Fuzzer</span>
+                    </div>
+                </div>
+                <!-- Screenshot 3 -->
+                <div class="glass-card gallery-card" onclick="openLightbox('icons/screenshot_decoder_view.png', 'Advanced Decoder Tool')">
+                    <img src="icons/screenshot_decoder_view.png" alt="Decoder Screen" class="gallery-img">
+                    <div class="gallery-overlay">
+                        <span class="gallery-text">Decoder & Hash Panel</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation / CTA -->
+    <section id="installation" class="installation section">
+        <div class="container">
+            <div class="glass-card cta-card">
+                <h2 class="cta-title">Start Hunting Today</h2>
+                <p class="cta-desc">Integrate BurpLite into your browser DevTools environment in less than a minute.</p>
+                <div class="install-steps">
+                    <div class="step-card">
+                        <div class="step-num">1</div>
+                        <h4>Clone Code</h4>
+                        <p>Download the repository zip or clone it locally from GitHub.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">2</div>
+                        <h4>Load Unpacked</h4>
+                        <p>Go to extensions settings and select the <code>chrome/</code> or <code>firefox/</code> folder.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">3</div>
+                        <h4>Inspect Page</h4>
+                        <p>Open browser DevTools (F12) and switch to the <strong>BurpLite</strong> tab.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Developer Section -->
+    <section class="developer section">
+        <div class="container">
+            <div class="glass-card dev-card">
+                <h3 class="dev-title">Developed by</h3>
+                <h2 class="dev-name text-glow">JOJIN JOHN</h2>
+                <p class="dev-desc">Security Researcher, Ethical Hacker, and Full Stack Developer.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+        <span class="lightbox-close">&times;</span>
+        <img id="lightbox-img" class="lightbox-img" src="" alt="">
+        <div id="lightbox-caption" class="lightbox-caption"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <p>&copy; 2026 BurpLite. Developed by JOJIN JOHN. All rights reserved.</p>
+            <p class="footer-meta">Created for ethical security assessment and penetration testing operations.</p>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+</html>
