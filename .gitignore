@@ -1,0 +1,4 @@
+tmp_playwright_profile/
+*.zip
+*.log
+.gemini/
