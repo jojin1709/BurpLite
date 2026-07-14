@@ -23,6 +23,17 @@ A modern Chrome & Firefox DevTools Extension for penetration testing, security a
 - **Scanner**: Detect vulnerabilities and perform light security checks.
 - **Side Panel**: Intercept and manage background requests on the fly (debugger integration).
 
+## Screenshots
+
+### Repeater Editor (with cURL Import & Header Profiles)
+![Repeater Editor](icons/screenshot_panel.png)
+
+### Intruder Fuzzer (Attack Panel)
+![Intruder](icons/screenshot_intruder.png)
+
+### Multi-Format Decoder & Hash Calculator
+![Decoder](icons/screenshot_decoder.png)
+
 ## Installation
 
 ### Chrome
