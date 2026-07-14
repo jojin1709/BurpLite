@@ -4,6 +4,10 @@ A modern Chrome & Firefox DevTools Extension for penetration testing, security a
 
 **Developed by: JOJIN JOHN**
 
+## Contributors
+
+- **JOJIN JOHN** (Lead Developer & Creator)
+
 ---
 
 ## Features
