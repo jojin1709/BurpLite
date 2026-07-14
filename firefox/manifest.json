@@ -23,14 +23,16 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "burplite@jojinjohn.sec",
-      "strict_min_version": "109.0"
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "status": "not_collected"
+      }
     }
   },
   "permissions": [
     "storage",
     "scripting",
-    "cookies",
-    "debugger"
+    "cookies"
   ],
   "host_permissions": [
     "<all_urls>"
