@@ -806,3 +806,72 @@ body {
         font-size: 2.4rem;
     }
 }
+
+/* Privacy Modal */
+.privacy-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.privacy-modal.active {
+    display: flex;
+}
+
+.privacy-card {
+    max-width: 600px;
+    width: 100%;
+    padding: 40px;
+    position: relative;
+    border-color: rgba(0, 240, 255, 0.2);
+    box-shadow: 0 0 50px rgba(0, 240, 255, 0.1);
+}
+
+.close-privacy {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    font-size: 2rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.close-privacy:hover {
+    color: var(--neon-magenta);
+}
+
+.privacy-content {
+    line-height: 1.7;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.privacy-content p {
+    margin-bottom: 16px;
+}
+
+.footer-links {
+    margin: 8px 0;
+}
+
+.footer-links a {
+    color: var(--neon-cyan);
+    text-decoration: none;
+    transition: var(--transition-smooth);
+    font-weight: 500;
+}
+
+.footer-links a:hover {
+    color: var(--neon-magenta);
+    text-shadow: 0 0 8px rgba(255, 0, 127, 0.5);
+}

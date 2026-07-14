@@ -5,6 +5,7 @@ A modern Chrome & Firefox DevTools Extension for penetration testing, security a
 **Developed by: JOJIN JOHN**
 
 🔗 **Official Website**: [jojin1709.github.io/BurpLite/](https://jojin1709.github.io/BurpLite/)
+🦊 **Firefox Add-on Store**: [addons.mozilla.org/firefox/addon/burplite/](https://addons.mozilla.org/en-US/firefox/addon/burplite/)
 
 ## Contributors
 
@@ -45,9 +46,9 @@ A modern Chrome & Firefox DevTools Extension for penetration testing, security a
 4. Click **Load unpacked** and select the `chrome/` directory.
 
 ### Firefox
-1. Install the packaged `BurpLite.xpi` file directly, or:
-2. Open Firefox and navigate to `about:debugging`.
-3. Click **This Firefox** -> **Load Temporary Add-on** and select any file inside the `firefox/` directory.
+1. **Standard Install**: Download and install it directly from the official [Firefox Add-on Store](https://addons.mozilla.org/en-US/firefox/addon/burplite/).
+2. **Offline Install**: Download the packaged `BurpLite.xpi` file and open/drag it into Firefox.
+3. **Developer Mode**: Open Firefox and navigate to `about:debugging`. Click **This Firefox** -> **Load Temporary Add-on** and select any file inside the `firefox/` directory.
 
 ---
 *Created for secure and ethical hacking.*

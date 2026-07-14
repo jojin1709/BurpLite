@@ -150,5 +150,24 @@ window.closeLightbox = function() {
 
 // Close lightbox on escape key
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'Escape') {
+        closeLightbox();
+        closePrivacyModal();
+    }
 });
+
+// Privacy Modal functions
+window.openPrivacyModal = function(e) {
+    if (e) e.preventDefault();
+    document.getElementById('privacy-modal').classList.add('active');
+}
+
+window.closePrivacyModal = function() {
+    document.getElementById('privacy-modal').classList.remove('active');
+}
+
+window.closePrivacyModalOnOuter = function(e) {
+    if (e.target.id === 'privacy-modal') {
+        closePrivacyModal();
+    }
+}

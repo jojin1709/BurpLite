@@ -48,9 +48,9 @@
                         <img class="browser-icon" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/chrome/chrome-original.svg" alt="Chrome Logo">
                         Download for Chrome
                     </a>
-                    <a href="https://github.com/jojin1709/BurpLite/raw/main/BurpLite.xpi" class="btn btn-download btn-firefox" download>
+                    <a href="https://addons.mozilla.org/en-US/firefox/addon/burplite/" class="btn btn-download btn-firefox" target="_blank" rel="noopener noreferrer">
                         <img class="browser-icon" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/firefox/firefox-original.svg" alt="Firefox Logo">
-                        Download Firefox .xpi
+                        Download for Firefox
                     </a>
                 </div>
             </div>
@@ -247,9 +247,25 @@
     <footer class="footer">
         <div class="container footer-container">
             <p>&copy; 2026 BurpLite. Developed by JOJIN JOHN. All rights reserved.</p>
+            <p class="footer-links">
+                <a href="#privacy-modal" onclick="openPrivacyModal(event)">Privacy Policy</a>
+            </p>
             <p class="footer-meta">Created for ethical security assessment and penetration testing operations.</p>
         </div>
     </footer>
+
+    <!-- Privacy Modal -->
+    <div id="privacy-modal" class="privacy-modal" onclick="closePrivacyModalOnOuter(event)">
+        <div class="glass-card privacy-card">
+            <span class="close-privacy" onclick="closePrivacyModal()">&times;</span>
+            <h3 class="text-glow" style="font-size: 1.8rem; font-weight: 800; margin-bottom: 20px;">Privacy Policy</h3>
+            <div class="privacy-content">
+                <p><strong>BurpLite</strong> is committed to preserving the privacy of its users. This extension does not collect, record, track, transmit, or share any personal data, user credentials, browsing history, telemetry, or network traffic logs.</p>
+                <p>All core capabilities (including request tampering, fuzzing, encoding/decoding, and security scanning) operate entirely locally within your browser's DevTools execution context. No network requests are made to external backend servers except those initiated by the user through the Repeater, Intruder, or Collaborator configurations.</p>
+                <p>By using BurpLite, you agree that your actions and traffic are processed strictly locally on your own client machine.</p>
+            </div>
+        </div>
+    </div>
 
     <script src="main.js"></script>
 </body>
