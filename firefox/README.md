@@ -26,13 +26,13 @@ A modern Chrome & Firefox DevTools Extension for penetration testing, security a
 ## Screenshots
 
 ### Repeater Editor (with cURL Import & Header Profiles)
-![Repeater Editor](icons/screenshot_panel.png)
+![Repeater Editor](icons/screenshot_repeater.png)
 
 ### Intruder Fuzzer (Attack Panel)
-![Intruder](icons/screenshot_intruder.png)
+![Intruder](icons/screenshot_intruder_view.png)
 
 ### Multi-Format Decoder & Hash Calculator
-![Decoder](icons/screenshot_decoder.png)
+![Decoder](icons/screenshot_decoder_view.png)
 
 ## Installation
 
