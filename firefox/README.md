@@ -4,6 +4,8 @@ A modern Chrome & Firefox DevTools Extension for penetration testing, security a
 
 **Developed by: JOJIN JOHN**
 
+🔗 **Official Website**: [jojin1709.github.io/BurpLite/](https://jojin1709.github.io/BurpLite/)
+
 ## Contributors
 
 - **JOJIN JOHN** (Lead Developer & Creator)
